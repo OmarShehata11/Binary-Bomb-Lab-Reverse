@@ -47,7 +47,7 @@ to start the debugger and load the binary file with gdbCfg file:
 
 
 after it starts, it will print out what we wrote in the gdbCfg file, but first I want to disassemble the main function, by writing ```disas``` to disassemble the function we are standing at :
-![Disassemble of main function](images/Disassemble%20of%20main%20function)
+![Disassemble of main function](images/disas%20of%20main.png)
 
 ### Reading the Second Argument
 we see that it starts with comparison the value stored in ```rdi``` register if it equals to  1  or 2, if 1 it will just do call ```<initialize_bomb>``` function and continue, and if 2 it will read the second value pointed to by ```rsi```, we know that in system v call convention that the rdi stores the first argument ( which in our case is the ```argc``` argument) and the rsi stores the second argument (```argv```), so it seems that if I pass it an argument it will try to find that file and read it to it's input, but in our case now let's just ignore that.
@@ -64,25 +64,25 @@ which to blow yourself up. Have a nice day!
 ```
 then it calls ```read_line``` and wait for us to enter an input, let's just enter ```omar```...
 
-![before the call of phase_1](https://photos.app.goo.gl/ghAy5SnbtAXnYVrW7)
+![before the call of phase_1](images/before%20the%20call%20of%20phase_1.png)
 
 so it moves the returned value of ```read_line``` function to the ```rdi``` register then calls ```phase_1``` function, so it takes our input as an argument to phase_1 function, so let's step-into the function(use ```si``` command) and disassemble it: 
 
-![disassemble of phase_1 function](https://photos.app.goo.gl/U4GRqAtqY3KZCnJcA) 
+![disassemble of phase_1 function](images/before%20the%20call%20of%20phase_1.png) 
 we see that it moves a value to ```rsi``` then it calls ```<strings_not_equal>``` function, so it's the second argument of it. then it checks the return value, if it equals to 0 it will continue otherwise it will jump to call function ```<explode_bomb>``` which sounds it a bad choice to us. so we need to make ```strings_not_equal``` returns zero. but first let's examine what in the first and second argument to that function.
 
 ```x/s $rdi``` will print to us ```omar```value, which is our input, and second argument can be examined by: ```x/s 0x555555557150``` as the debugger lists(this is the address calculated after ```$rip-0x1b9a```) or by just execute the instruction of the load and examine ```rsi``` it self, it doesn't matter. we see that it contain : ```I am just a renegade hockey mom.```. that's an interested string, let's now disassemble the ```strings_not_equal``` function without stepping-into it; by just type : ```disas strings_not_equal``` in gdb, it will print :
-![disassemble of strings_not_equal function](https://photos.app.goo.gl/PjxyEmr8hqGCidZs7)
+![disassemble of strings_not_equal function](images/disassemble%20of%20strings_not_equal%20function.png)
 
 here we notice many things, first it call ```string_length``` twice, on with argument of our input and the other with Harden-string as an argument to get their size, then compare the size of them, if not equaled it will return 1, and if equal will go to next test.
 
 and here you can see that it identifies a loop, starting with the first byte of my input in the instruction : ```movzbl (%rbx), %edx``` (it's similar to ```movzx edx, BYTE PTR[rbx]``` in intel flavor, it just moves the first character of my input and put it in edx). then it enters the loop and compare every character of my input to every character in the Harden-string (with the same index of course). and if it hit the Null byte it will break and return zero and exit.
 
 so it simply compares my input to the Harden-string (and it's just easy to know from the name of the function). so now if I completed the debugging with my input it will call ```explode_bomb  ``` :
-![execute with wrong answer](https://photos.app.goo.gl/Ci2dQ3QV3KC9Hkem8)
+![execute with wrong answer](images/execute%20with%20wrong%20answer.png)
 
 let's try now with the new answer : ```I am just a renegade hockey mom.``` :
-![answer of phase_1](https://photos.app.goo.gl/rSWmEdw6Vw7agynG9)
+![answer of phase_1](images/answer%20of%20phase_1.png)
 
 now, let's move to the second phase.
 
